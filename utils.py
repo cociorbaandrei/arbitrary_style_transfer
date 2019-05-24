@@ -1,10 +1,11 @@
 # Utility
 
-import numpy as np
-
 from os import listdir, mkdir, sep
 from os.path import join, exists, splitext
-from scipy.misc import imread, imsave, imresize
+
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 def list_images(directory):
@@ -23,17 +24,18 @@ def list_images(directory):
 def get_train_images(paths, resize_len=512, crop_height=256, crop_width=256):
     images = []
     for path in paths:
-        image = imread(path, mode='RGB')
+        image = cv2.imread(path)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         height, width, _ = image.shape
 
         if height < width:
             new_height = resize_len
-            new_width  = int(width * new_height / height)
+            new_width = int(width * new_height / height)
         else:
-            new_width  = resize_len
+            new_width = resize_len
             new_height = int(height * new_width / width)
 
-        image = imresize(image, [new_height, new_width], interp='nearest')
+        image = cv2.resize(image, (new_width, new_height))
 
         # crop the image
         start_h = np.random.choice(new_height - crop_height + 1)
@@ -53,10 +55,11 @@ def get_images(paths, height=None, width=None):
 
     images = []
     for path in paths:
-        image = imread(path, mode='RGB')
+        image = cv2.imread(path)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         if height is not None and width is not None:
-            image = imresize(image, [height, width], interp='nearest')
+            image = cv2.resize(image, (width, height))
 
         images.append(image)
 
@@ -66,8 +69,7 @@ def get_images(paths, height=None, width=None):
 
 
 def save_images(datas, contents_path, styles_path, save_dir, suffix=None):
-
-    assert(len(datas) == len(contents_path) * len(styles_path))
+    assert (len(datas) == len(contents_path) * len(styles_path))
 
     if not exists(save_dir):
         mkdir(save_dir)
@@ -86,9 +88,26 @@ def save_images(datas, contents_path, styles_path, save_dir, suffix=None):
 
             content_name = content_path_name.split(sep)[-1]
             style_name = style_path_name.split(sep)[-1]
-            
-            save_path = join(save_dir, '%s-%s%s%s' % 
-                (content_name, style_name, suffix, content_ext))
 
-            imsave(save_path, data)
+            save_path = join(save_dir, '%s-%s%s%s' %
+                             (content_name, style_name, suffix, content_ext))
+            data = cv2.cvtColor(data, cv2.COLOR_RGB2BGR)
+            cv2.imwrite(save_path, data)
 
+
+def plot_side_by_side(imgs, titles=None):
+    fig = plt.figure(figsize=(20, 20))
+    columns = len(imgs)
+    rows = 1
+    for i in range(1, columns * rows + 1):
+        fig.add_subplot(rows, columns, i, title=titles[i - 1] if titles is not None else None)
+        try:
+            img = imgs[i - 1]
+        except IndexError:
+            img = imgs[i - 1].squeeze(axis=2)
+        if len(img.shape) == 3:
+            plt.imshow(img[:, :, [2, 1, 0]], cmap='Greys_r')
+        else:
+            plt.imshow(img, cmap='Greys_r')
+
+    plt.show()
