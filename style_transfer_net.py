@@ -14,7 +14,7 @@ class StyleTransferNet(object):
         self.encoder = Encoder(encoder_weights_path)
         self.decoder = Decoder()
 
-    def transform(self, content, style):
+    def transform(self, content, style, alpha):
         # switch RGB to BGR
         content = tf.reverse(content, axis=[-1])
         style = tf.reverse(style, axis=[-1])
@@ -31,7 +31,7 @@ class StyleTransferNet(object):
         self.encoded_style_layers = enc_s_layers
 
         # pass the encoded images to AdaIN
-        target_features = AdaIN(enc_c, enc_s)
+        target_features = alpha * AdaIN(enc_c, enc_s) + (1 - alpha) * enc_c
         self.target_features = target_features
 
         # decode target features back to image
